@@ -1,0 +1,30 @@
+{% if current_user.is_authenticated %}
+    <a href="{{ url_for('logout') }}">Sign Out {{current_user.username}}</a>
+{% else %}
+    <a href="{{ url_for('login') }}">Sign In</a>
+{% endif %}
+<br>
+<br>
+
+<h4>Navigation</h4>
+<ul>
+	<li><a href="{{ url_for('index')}}">Team/player select</a></li>
+	<li><a href="{{ url_for('all_teams')}}">See all saved teams</a></li>
+	<li><a href="{{ url_for('all_players')}}">See all saved players</a></li>
+</ul>
+
+
+{% block main_content %}
+<form action="{{url_for('player_select')}}" method="GET">
+	{{ team_form.hidden_tag() }}
+	{{ team_form.team_select.label }} {{ team_form.team_select() }}
+	{{ team_form.submit() }}
+</form>
+
+<div>
+{% for message in get_flashed_messages() %}
+{{ message }}
+{% endfor %}
+</div>
+
+{% endblock %}

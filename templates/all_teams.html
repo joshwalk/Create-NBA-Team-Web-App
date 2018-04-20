@@ -1,0 +1,11 @@
+{% extends 'index.html' %}
+
+{% block main_content %}
+<h2>Saved teams</h2>
+<ul>
+{% for team in teams %}
+    <li>{{ team }}</li>
+{% endfor %}
+</ul>
+
+{% endblock %}

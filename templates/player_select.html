@@ -1,0 +1,13 @@
+{% extends 'index.html' %}
+
+{% block main_content %}
+
+<h2>{{ team_selected_name }}</h2>
+<p>Select player(s) to add</p>
+<form method="POST">
+	{{ player_form.hidden_tag() }}
+	{{ player_form.player_select(size=15) }}
+	{{ player_form.submit() }}
+</form>
+
+{% endblock %}
