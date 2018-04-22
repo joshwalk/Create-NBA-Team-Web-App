@@ -1,0 +1,18 @@
+{% extends 'index.html' %}
+
+{% block main_content %}
+<h4>Player search</h4>
+
+<form action="{{url_for('player_search')}}" method="POST">
+	{{ form.hidden_tag() }}
+	{{ form.player_search.label }} {{ form.player_search }}
+	{{ form.submit() }}
+</form>
+
+<ul>
+{% for result in results %}
+    <li>{{ result }}</li>
+{% endfor %}
+</ul>
+
+{% endblock %}

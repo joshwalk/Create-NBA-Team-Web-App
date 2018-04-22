@@ -1,0 +1,13 @@
+{% extends 'index.html' %}
+
+{% block main_content %}
+
+<h4>Create a custom team</h4>
+<form action="" method="POST">
+	{{ form.hidden_tag() }}
+	{{ form.name.label }} {{ form.name() }}<br>
+	{{ form.player_list.label }} {{ form.player_list(size=15) }}
+	{{ form.submit() }}
+</form>
+
+{% endblock %}

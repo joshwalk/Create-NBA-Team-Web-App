@@ -35,7 +35,7 @@ login_manager.session_protection = 'strong'
 login_manager.login_view = 'login'
 login_manager.init_app(app)
 
-# The following static data was retrieved from the nba.py project (https://github.com/seemethere/nba_py)
+# The following static data was retrieved and modified from the nba.py project (https://github.com/seemethere/nba_py)
 team_choices = [('1610612737', 'Atlanta Hawks'),
  ('1610612738', 'Boston Celtics'),
  ('1610612751', 'Brooklyn Nets'),
@@ -75,19 +75,20 @@ headers = {
     }
 
 # Association tables
-user_collection = db.Table('user_collection',db.Column('player_id', db.Integer, db.ForeignKey('players.id')),db.Column('collection_id',db.Integer, db.ForeignKey('personalPlayerCollections.id')))
+user_teams = db.Table('user_teams',db.Column('player_id', db.Integer, db.ForeignKey('players.id')),db.Column('custom_team_id',db.Integer, db.ForeignKey('customTeams.id')))
 
 ########################
 ######## Models #########
 ########################
 
+## cite login stuff
 class User(UserMixin, db.Model):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(255), unique=True, index=True)
     email = db.Column(db.String(64), unique=True, index=True)
     password_hash = db.Column(db.String(128))
-    collection = db.relationship('PersonalPlayerCollection', backref='User')
+    collection = db.relationship('CustomTeam', backref='User')
 
     @property
     def password(self):
@@ -113,17 +114,7 @@ class Player(db.Model):
     team_id = db.Column(db.Integer, db.ForeignKey("teams.id"))
 
     def __repr__(self):
-        return "{}, Jersey No.: {}".format(self.name,str(self.jersey_no))
-
-
-# Model to store a personal player collection
-class PersonalPlayerCollection(db.Model):
-    __tablename__ = "personalPlayerCollections"
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(255))
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    players = db.relationship('Player',secondary=user_collection,backref=db.backref('personalPlayerCollections',lazy='dynamic'),lazy='dynamic')
-
+        return self.name
 
 class Team(db.Model):
     __tablename__ = "teams"
@@ -133,6 +124,14 @@ class Team(db.Model):
 
     def __repr__(self):
         return self.name
+
+class CustomTeam(db.Model):
+    __tablename__ = "customTeams"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255))
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    players = db.relationship('Player',secondary=user_teams,backref=db.backref('customTeams',lazy='dynamic'),lazy='dynamic')
+
 
 ########################
 ######## Forms #########
@@ -175,6 +174,16 @@ class PlayerSelectForm(FlaskForm):
     player_select = SelectMultipleField('Select player(s)')
     submit = SubmitField("Add players")
 
+class PlayerSearchForm(FlaskForm):
+    player_search = StringField('Enter first and/or last name')
+    submit = SubmitField("Search")
+
+class NewCustomTeamForm(FlaskForm):
+    name = StringField('Custom team name')
+    player_list = SelectMultipleField('Select players to add to team')
+    submit = SubmitField("Create team")
+
+
 ########################
 ### Helper functions ###
 ########################
@@ -204,6 +213,19 @@ def get_or_create_team(db_session, name):
         db_session.add(team)
         db_session.commit()
         return team
+
+def get_or_create_custom_team(db_session, name, current_user, selected_players=[]):
+    customTeam = db_session.query(CustomTeam).filter_by(name=name,user_id=current_user.id).first()
+    if customTeam:
+        return customTeam
+    else:
+        customTeam = CustomTeam(name=name, user_id=current_user.id,players=[])
+        for player in selected_players:
+            customTeam.players.append(player)
+        db_session.add(customTeam)
+        db_session.commit()
+        return customTeam
+
 
 
 ########################
@@ -296,6 +318,47 @@ def all_players():
 def all_teams():
     teams = Team.query.all()
     return render_template('all_teams.html', teams=teams)
+
+@app.route('/player_search', methods= ['POST','GET'])
+def player_search():
+    results = []
+    search_form = PlayerSearchForm()
+    if search_form.validate_on_submit():
+        query = search_form.player_search.data
+        results = Player.query.filter(Player.name.contains(query)).all()
+    return render_template('player_search.html', form=search_form, results=results)
+
+@app.route('/new_custom_team',methods=["GET","POST"])
+@login_required
+def create_custom_team():
+    form = NewCustomTeamForm()
+    players = Player.query.all()
+    form.player_list.choices = [(p,p) for p in players]
+    if form.submit():
+        name = form.name.data
+        player_list_selected = form.player_list.data
+        if player_list_selected:
+            # player1 = (player_list_selected[0])
+            # player1_db = Player.query.filter_by(name=player1).first()
+            # print(player1_db.id)
+            player_objects = [Player.query.filter_by(name=p_name).first() for p_name in player_list_selected]
+            get_or_create_custom_team(db_session=db.session, name=name, current_user=current_user, selected_players=player_objects)
+            # return redirect(url_for('custom_teams'))
+    return render_template('new_custom_team.html', form=form)
+
+@app.route('/custom_teams',methods=["GET","POST"])
+@login_required
+def custom_teams():
+    custom_teams = CustomTeam.query.filter_by(user_id = current_user.id).all()
+    return render_template('custom_teams.html', custom_teams=custom_teams)
+
+# Provided
+# @app.route('/custom_team/<id_num>')
+# def single_collection(id_num):
+#     id_num = int(id_num)
+#     collection = PersonalGifCollection.query.filter_by(id=id_num).first()
+#     gifs = collection.gifs.all()
+#     return render_template('collection.html',collection=collection, gifs=gifs)
 
 
 if __name__ == '__main__':

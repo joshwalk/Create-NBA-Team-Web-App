@@ -4,15 +4,19 @@
     <a href="{{ url_for('login') }}">Sign In</a>
 {% endif %}
 <br>
-<br>
+<h2>Joshua Walker SI364 Final // NBA player app</h2>
 
-<h4>Navigation</h4>
+<h3>Navigation</h3>
 <ul>
 	<li><a href="{{ url_for('index')}}">Team/player select</a></li>
 	<li><a href="{{ url_for('all_teams')}}">See all saved teams</a></li>
 	<li><a href="{{ url_for('all_players')}}">See all saved players</a></li>
-</ul>
+	<li><a href="{{ url_for('player_search')}}">Search for saved players</a></li>
+	<li><a href="{{ url_for('create_custom_team')}}">Create a custom team</a></li>
+	<li><a href="{{ url_for('custom_teams')}}">View your custom teams</a></li>
 
+</ul>
+<hr>
 
 {% block main_content %}
 <form action="{{url_for('player_select')}}" method="GET">
