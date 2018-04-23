@@ -161,10 +161,6 @@ class LoginForm(FlaskForm):
     remember_me = BooleanField('Keep me logged in')
     submit = SubmitField('Log In')
 
-# class GifSearchForm(FlaskForm):
-#     search = StringField("Enter a term to search GIFs", validators=[Required()])
-#     submit = SubmitField('Submit')
-
 class TeamSelectForm(FlaskForm):
     team_select = SelectField('Select team')
     # player_select = SelectMultipleField('Select players to add')
@@ -183,6 +179,15 @@ class NewCustomTeamForm(FlaskForm):
     player_list = SelectMultipleField('Select players to add to team')
     submit = SubmitField("Create team")
 
+class UpdateButton(FlaskForm):
+    submit = SubmitField("Rename")
+
+class UpdateForm(FlaskForm):
+    name = StringField('Name', validators=[Required()])
+    submit = SubmitField('Update name')
+
+class DeleteButton(FlaskForm):
+    submit = SubmitField('Delete')
 
 ########################
 ### Helper functions ###
@@ -226,8 +231,6 @@ def get_or_create_custom_team(db_session, name, current_user, selected_players=[
         db_session.commit()
         return customTeam
 
-
-
 ########################
 #### View functions ####
 ########################
@@ -241,7 +244,6 @@ def page_not_found(e):
 @app.errorhandler(500)
 def internal_server_error(e):
     return render_template('500.html'), 500
-
 
 ## Login-related routes
 @app.route('/login',methods=["GET","POST"])
@@ -276,16 +278,16 @@ def register():
 ## other routes
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    team_form = TeamSelectForm()
-    team_form.team_select.choices = team_choices
-    # if team_form.validate_on_submit()
-    #     team_selected = team_form.team_select.data
-    #     team_selected_name = dict(team_choices)[str(team_selected)]
-    #     new_team = get_or_create_team(db.session, team_selected_name)
-    #     players_from_team = get_players_from_team(int(team_selected))
-    #     player_form.player_select.choices = [(x,x) for x in players_from_team]
-    #     return redirect(url_for('player_select'))
-    return render_template('index.html',team_form=team_form)
+    form = TeamSelectForm()
+    form.team_select.choices = team_choices
+    if form.validate_on_submit():
+        team_selected = form.team_select.data
+        team_selected_name = dict(team_choices)[str(team_selected)]
+        new_team = get_or_create_team(db.session, team_selected_name)
+        players_from_team = get_players_from_team(int(team_selected))
+        player_form.player_select.choices = [(x,x) for x in players_from_team]
+        return redirect(url_for('player_select'))
+    return render_template('index.html',form=form)
 
 @app.route('/player_select', methods=['GET', 'POST'])
 def player_select():
@@ -294,25 +296,21 @@ def player_select():
     team_selected_name = dict(team_choices)[str(team_selected)]
     new_team = get_or_create_team(db.session, team_selected_name)
     players_from_team = get_players_from_team(int(team_selected))
-
     player_form = PlayerSelectForm()
     player_form.player_select.choices = [(x,x) for x in players_from_team]
     if player_form.validate_on_submit():
         print(player_form.player_select.data)
         for p in player_form.player_select.data:
             get_or_create_player(db.session, p, new_team.id)
+        return redirect(url_for('all_players'))
     return render_template('player_select.html',player_form=player_form, team_selected_name=team_selected_name)
 
 
 @app.route('/all_players')
 def all_players():
-    player_team_list = []
-    for player in Player.query.all():
-        name = player.name
-        team = Team.query.filter_by(id=player.team_id).first().name
-        name_team = name + ", " + team
-        player_team_list.append(name_team)
-    return render_template('all_players.html', player_team_list=player_team_list)
+    form = DeleteButton()
+    player_team_list = Player.query.all()
+    return render_template('all_players.html', form=form, player_team_list=player_team_list)
 
 @app.route('/all_teams')
 def all_teams():
@@ -349,17 +347,40 @@ def create_custom_team():
 @app.route('/custom_teams',methods=["GET","POST"])
 @login_required
 def custom_teams():
+    form = UpdateButton()
     custom_teams = CustomTeam.query.filter_by(user_id = current_user.id).all()
-    return render_template('custom_teams.html', custom_teams=custom_teams)
+    return render_template('custom_teams.html', custom_teams=custom_teams, form=form)
 
-# Provided
-# @app.route('/custom_team/<id_num>')
-# def single_collection(id_num):
-#     id_num = int(id_num)
-#     collection = PersonalGifCollection.query.filter_by(id=id_num).first()
-#     gifs = collection.gifs.all()
-#     return render_template('collection.html',collection=collection, gifs=gifs)
+@app.route('/custom_team/<id_num>')
+def custom_team(id_num):
+    id_num = int(id_num)
+    custom_team = CustomTeam.query.filter_by(id=id_num).first()
+    players = custom_team.players.all()
+    return render_template('custom_team.html',custom_team=custom_team, players=players)
 
+@app.route('/update/<custom_team_id>',methods=["GET","POST"])
+def update(custom_team_id):
+    form = UpdateForm()
+    if request.method == 'POST':
+        name = form.name.data
+        custom_team = CustomTeam.query.filter_by(id=custom_team_id).first()
+        if custom_team:
+            custom_team.name = name
+            db.session.commit()
+            return redirect(url_for('custom_teams'))
+    return render_template('update_team.html', form=form)
+
+
+@app.route('/delete/<player_id>',methods=["GET","POST"])
+def delete(player_id):
+    if request.method == "POST":
+        player = Player.query.filter_by(id=int(player_id)).first()
+        if player:
+            name = player.name
+            db.session.delete(player)
+            db.session.commit()
+            flash("Successfully deleted player: {}".format(name))
+            return redirect(url_for('all_players'))
 
 if __name__ == '__main__':
     db.create_all()

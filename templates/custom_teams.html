@@ -5,7 +5,12 @@
 <h4>My custom teams</h4>
 <ul>
 {% for team in custom_teams %}
-    <li><a href="http://localhost:5000/custom_team/{{ team.id }}">{{ team.name }}</a></li>
+    <li><a href="http://localhost:5000/custom_team/{{ team.id }}">{{ team.name }}</a>
+		<form method="GET" action="{{ url_for('update', custom_team_id=team.id)}}">
+			{{ form.hidden_tag() }}
+			{{ form.submit() }}
+		</form>
+	</li>
 {% endfor %}
 </ul>
 

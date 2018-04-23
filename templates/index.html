@@ -8,7 +8,7 @@
 
 <h3>Navigation</h3>
 <ul>
-	<li><a href="{{ url_for('index')}}">Team/player select</a></li>
+	<li><a href="{{ url_for('index')}}">Add team/player to database</a></li>
 	<li><a href="{{ url_for('all_teams')}}">See all saved teams</a></li>
 	<li><a href="{{ url_for('all_players')}}">See all saved players</a></li>
 	<li><a href="{{ url_for('player_search')}}">Search for saved players</a></li>
@@ -20,9 +20,9 @@
 
 {% block main_content %}
 <form action="{{url_for('player_select')}}" method="GET">
-	{{ team_form.hidden_tag() }}
-	{{ team_form.team_select.label }} {{ team_form.team_select() }}
-	{{ team_form.submit() }}
+	{{ form.hidden_tag() }}
+	{{ form.team_select.label }} {{ form.team_select() }}
+	{{ form.submit() }}
 </form>
 
 <div>
