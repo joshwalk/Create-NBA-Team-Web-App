@@ -341,7 +341,7 @@ def create_custom_team():
             # print(player1_db.id)
             player_objects = [Player.query.filter_by(name=p_name).first() for p_name in player_list_selected]
             get_or_create_custom_team(db_session=db.session, name=name, current_user=current_user, selected_players=player_objects)
-            # return redirect(url_for('custom_teams'))
+            return redirect(url_for('custom_teams'))
     return render_template('new_custom_team.html', form=form)
 
 @app.route('/custom_teams',methods=["GET","POST"])
