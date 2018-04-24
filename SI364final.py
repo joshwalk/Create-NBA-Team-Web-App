@@ -113,11 +113,14 @@ class User(UserMixin, db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id)) # returns User object or None
 
+# migration was run to add column "new_field"
 class Player(db.Model):
     __tablename__ = "players"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128))
     team_id = db.Column(db.Integer, db.ForeignKey("teams.id"))
+
+    new_field = db.Column(db.String(128))
 
     def __repr__(self):
         return self.name
