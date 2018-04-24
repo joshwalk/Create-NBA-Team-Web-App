@@ -144,7 +144,6 @@ class CustomTeam(db.Model):
 ######## Forms #########
 ########################
 
-# Provided
 class RegistrationForm(FlaskForm):
     email = StringField('Email:', validators=[Required(),Length(1,64),Email()])
     username = StringField('Username:',validators=[Required(),Length(1,64),Regexp('^[A-Za-z][A-Za-z0-9_.]*$',0,'Usernames must have only letters, numbers, dots or underscores')])
@@ -161,7 +160,6 @@ class RegistrationForm(FlaskForm):
         if User.query.filter_by(username=field.data).first():
             raise ValidationError('Username already taken')
 
-# Provided
 class LoginForm(FlaskForm):
     email = StringField('Email', validators=[Required(), Length(1,64), Email()])
     password = PasswordField('Password', validators=[Required()])
@@ -176,6 +174,7 @@ class PlayerSelectForm(FlaskForm):
     player_select = SelectMultipleField('Select player(s)')
     submit = SubmitField("Add players")
 
+# custom validator; uses regex to check if first/last name begins with capital letter
 def capitalized_check(form, field):
     if not re.findall(r'[A-Z][a-z]+', field.data):
         raise ValidationError('First/last name must begin with capital letter')
@@ -184,6 +183,7 @@ class PlayerSearchForm(FlaskForm):
     player_search = StringField('Enter first and/or last name', validators=[Required(), capitalized_check])
     submit = SubmitField("Search")
 
+# custom validator; makes sure at least 2 players are added to custom team
 def more_than_one_check(form, field):
     if len(field.data) < 2:
         raise ValidationError('Must choose at least 2 players')
@@ -207,6 +207,7 @@ class DeleteButton(FlaskForm):
 ### Helper functions ###
 ########################
 
+# this function uses the NBA Stats API to get a list of players from any given team; it accepts the team's API id as a parameter; the list of tuples I created in team_choices has the API id for each team names
 def get_players_from_team(team_api_id):
     base_url = 'http://stats.nba.com/stats/commonteamroster/?Season=2017-18&TeamID='
     response = requests.get(base_url + str(team_api_id), headers=headers)
@@ -254,7 +255,6 @@ def get_or_create_custom_team(db_session, name, current_user, selected_players=[
 def page_not_found(e):
     return render_template('404.html'), 404
 
-
 @app.errorhandler(500)
 def internal_server_error(e):
     return render_template('500.html'), 500
@@ -289,7 +289,8 @@ def register():
         return redirect(url_for('login'))
     return render_template('register.html',form=form)
 
-## other routes
+# index page, contains team select form, after team selection submitted it is added to db
+# uses GET to send data to new page
 @app.route('/', methods=['GET', 'POST'])
 def index():
     form = TeamSelectForm()
@@ -303,6 +304,7 @@ def index():
         return redirect(url_for('player_select'))
     return render_template('index.html',form=form)
 
+# after user selects team, they choose players from that team in a SelectMultipleField, players added to db
 @app.route('/player_select', methods=['GET', 'POST'])
 def player_select():
     if request.args:
@@ -319,24 +321,26 @@ def player_select():
         return redirect(url_for('all_players'))
     return render_template('player_select.html',player_form=player_form, team_selected_name=team_selected_name)
 
-
+# queries all players in database and shows as unordered list
 @app.route('/all_players')
 def all_players():
     form = DeleteButton()
     player_team_list = Player.query.all()
     return render_template('all_players.html', form=form, player_team_list=player_team_list)
 
+# queries all teams in database and shows as unordered list
 @app.route('/all_teams')
 def all_teams():
     teams = Team.query.all()
     return render_template('all_teams.html', teams=teams)
 
+# queries players table using contains to act as a search, returns results as unordered list
+# sends data with POST request to same page
 @app.route('/player_search', methods= ['POST','GET'])
 def player_search():
     results = []
     search_form = PlayerSearchForm()
     if search_form.validate_on_submit():
-        print('hey')
         query = search_form.player_search.data
         results = Player.query.filter(Player.name.contains(query)).all()
 
@@ -345,6 +349,7 @@ def player_search():
         flash("Error in form submission - " + str(errors))
     return render_template('player_search.html', form=search_form, results=results)
 
+# user enters custom team name and selects players, this data added to db
 @app.route('/new_custom_team',methods=["GET","POST"])
 @login_required
 def create_custom_team():
@@ -364,6 +369,7 @@ def create_custom_team():
         flash("Error in form submission - " + str(errors))
     return render_template('new_custom_team.html', form=form)
 
+# queries a user's custom teams and shows as unordered list, includes update button to rename each team
 @app.route('/custom_teams',methods=["GET","POST"])
 @login_required
 def custom_teams():
@@ -371,6 +377,7 @@ def custom_teams():
     custom_teams = CustomTeam.query.filter_by(user_id = current_user.id).all()
     return render_template('custom_teams.html', custom_teams=custom_teams, form=form)
 
+# page for each custom team, queries all players from that team and shows as ul
 @app.route('/custom_team/<id_num>')
 def custom_team(id_num):
     id_num = int(id_num)
@@ -378,6 +385,7 @@ def custom_team(id_num):
     players = custom_team.players.all()
     return render_template('custom_team.html',custom_team=custom_team, players=players)
 
+# page where user enters new name for custom team
 @app.route('/update/<custom_team_id>',methods=["GET","POST"])
 def update(custom_team_id):
     form = UpdateForm()
@@ -390,7 +398,7 @@ def update(custom_team_id):
             return redirect(url_for('custom_teams'))
     return render_template('update_team.html', form=form)
 
-
+# route that results in specified player's deletion, redirects to all_players page
 @app.route('/delete/<player_id>',methods=["GET","POST"])
 def delete(player_id):
     if request.method == "POST":

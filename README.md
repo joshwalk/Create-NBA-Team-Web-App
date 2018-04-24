@@ -59,7 +59,7 @@ There are no additional modules to install.
 
 - [ ] **At least one one:many relationship that works properly built between 2 models.**
 
-- [ ]** At least one many:many relationship that works properly built between 2 models.**
+- [  ]**At least one many:many relationship that works properly built between 2 models.**
 
 - [ ] **Successfully save data to each table.**
 
@@ -95,7 +95,7 @@ There are no additional modules to install.
 
 - [ ] **Include at least one way to *update* items saved in the database in the application (like in HW5).**
 
-- [ ]** Include at least one way to *delete* items saved in the database in the application (also like in HW5).**
+- [ ] **Include at least one way to *delete* items saved in the database in the application (also like in HW5).**
 
 - [ ] **Include at least one use of `redirect`.**
 
