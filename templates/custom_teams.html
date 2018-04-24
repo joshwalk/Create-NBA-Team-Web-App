@@ -2,6 +2,10 @@
 
 {% block main_content %}
 
+{% if not custom_teams %}
+There are no custom teams yet. Go create one!
+{% else %}
+
 <h4>My custom teams</h4>
 <ul>
 {% for team in custom_teams %}
@@ -13,5 +17,7 @@
 	</li>
 {% endfor %}
 </ul>
+
+{% endif %}
 
 {% endblock %}

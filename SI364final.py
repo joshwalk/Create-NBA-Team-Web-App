@@ -1,3 +1,7 @@
+# Joshua Walker
+# SI 364 Final Project
+
+# Note: import statements, app configurations, and login configuration/setup and User models/functionality copied from provided code in HW4
 import os
 import requests
 import json
@@ -9,6 +13,7 @@ from wtforms.validators import Required, Length, Email, Regexp, EqualTo
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, MigrateCommand
 from werkzeug.security import generate_password_hash, check_password_hash
+import re
 
 # Imports for login management
 from flask_login import LoginManager, login_required, logout_user, login_user, UserMixin, current_user
@@ -23,7 +28,6 @@ app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get('DATABASE_URL') or "postg
 app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# App addition setups
 manager = Manager(app)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
@@ -36,6 +40,7 @@ login_manager.login_view = 'login'
 login_manager.init_app(app)
 
 # The following static data was retrieved and modified from the nba.py project (https://github.com/seemethere/nba_py)
+# The code I wrote to put the team choices together is in final_notes.ipynb
 team_choices = [('1610612737', 'Atlanta Hawks'),
  ('1610612738', 'Boston Celtics'),
  ('1610612751', 'Brooklyn Nets'),
@@ -66,6 +71,7 @@ team_choices = [('1610612737', 'Atlanta Hawks'),
  ('1610612761', 'Toronto Raptors'),
  ('1610612762', 'Utah Jazz'),
  ('1610612764', 'Washington Wizards')]
+# The header data allows for the successful request to the NBA Stats API, copied from aforementioned nba.py project
 headers = {
     'user-agent': ('Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.133 Safari/537.36'),
     'Dnt': ('1'),
@@ -75,13 +81,14 @@ headers = {
     }
 
 # Association tables
+# This association table, user_teams, connects the customTeams table with the players table to form a many-to-many relationship
 user_teams = db.Table('user_teams',db.Column('player_id', db.Integer, db.ForeignKey('players.id')),db.Column('custom_team_id',db.Integer, db.ForeignKey('customTeams.id')))
 
 ########################
 ######## Models #########
 ########################
 
-## cite login stuff
+# users table has a one-to-many relationship with customTeams
 class User(UserMixin, db.Model):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
@@ -106,7 +113,6 @@ class User(UserMixin, db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id)) # returns User object or None
 
-
 class Player(db.Model):
     __tablename__ = "players"
     id = db.Column(db.Integer, primary_key=True)
@@ -116,6 +122,7 @@ class Player(db.Model):
     def __repr__(self):
         return self.name
 
+# teams table has a one-to-many relationship with players
 class Team(db.Model):
     __tablename__ = "teams"
     id = db.Column(db.Integer, primary_key=True)
@@ -163,20 +170,27 @@ class LoginForm(FlaskForm):
 
 class TeamSelectForm(FlaskForm):
     team_select = SelectField('Select team')
-    # player_select = SelectMultipleField('Select players to add')
     submit = SubmitField("Continue")
 
 class PlayerSelectForm(FlaskForm):
     player_select = SelectMultipleField('Select player(s)')
     submit = SubmitField("Add players")
 
+def capitalized_check(form, field):
+    if not re.findall(r'[A-Z][a-z]+', field.data):
+        raise ValidationError('First/last name must begin with capital letter')
+
 class PlayerSearchForm(FlaskForm):
-    player_search = StringField('Enter first and/or last name')
+    player_search = StringField('Enter first and/or last name', validators=[Required(), capitalized_check])
     submit = SubmitField("Search")
+
+def more_than_one_check(form, field):
+    if len(field.data) < 2:
+        raise ValidationError('Must choose at least 2 players')
 
 class NewCustomTeamForm(FlaskForm):
     name = StringField('Custom team name')
-    player_list = SelectMultipleField('Select players to add to team')
+    player_list = SelectMultipleField('Select at least 2 players to add to team', validators=[Required(), more_than_one_check])
     submit = SubmitField("Create team")
 
 class UpdateButton(FlaskForm):
@@ -322,8 +336,13 @@ def player_search():
     results = []
     search_form = PlayerSearchForm()
     if search_form.validate_on_submit():
+        print('hey')
         query = search_form.player_search.data
         results = Player.query.filter(Player.name.contains(query)).all()
+
+    errors = [v for v in search_form.errors.values()]
+    if len(errors) > 0:
+        flash("Error in form submission - " + str(errors))
     return render_template('player_search.html', form=search_form, results=results)
 
 @app.route('/new_custom_team',methods=["GET","POST"])
@@ -331,17 +350,18 @@ def player_search():
 def create_custom_team():
     form = NewCustomTeamForm()
     players = Player.query.all()
-    form.player_list.choices = [(p,p) for p in players]
-    if form.submit():
+    form.player_list.choices = [(str(p),str(p)) for p in players]
+    if form.validate_on_submit():
         name = form.name.data
         player_list_selected = form.player_list.data
         if player_list_selected:
-            # player1 = (player_list_selected[0])
-            # player1_db = Player.query.filter_by(name=player1).first()
-            # print(player1_db.id)
             player_objects = [Player.query.filter_by(name=p_name).first() for p_name in player_list_selected]
             get_or_create_custom_team(db_session=db.session, name=name, current_user=current_user, selected_players=player_objects)
             return redirect(url_for('custom_teams'))
+
+    errors = [v for v in form.errors.values()]
+    if len(errors) > 0:
+        flash("Error in form submission - " + str(errors))
     return render_template('new_custom_team.html', form=form)
 
 @app.route('/custom_teams',methods=["GET","POST"])
@@ -379,7 +399,7 @@ def delete(player_id):
             name = player.name
             db.session.delete(player)
             db.session.commit()
-            flash("Successfully deleted player: {}".format(name))
+            flash("Player deleted: {}".format(name))
             return redirect(url_for('all_players'))
 
 if __name__ == '__main__':

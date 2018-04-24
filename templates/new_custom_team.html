@@ -3,6 +3,9 @@
 {% block main_content %}
 
 <h4>Create a custom team</h4>
+{% for message in get_flashed_messages() %}
+<strong style="color:red">{{ message }}</strong>
+{% endfor %}
 <form action="" method="POST">
 	{{ form.hidden_tag() }}
 	{{ form.name.label }} {{ form.name() }}<br>

@@ -1,11 +1,18 @@
 {% extends 'index.html' %}
 
 {% block main_content %}
+
+{% if not teams %}
+There are no teams added yet. Go add some!
+{% else %}
+
 <h4>Saved teams</h4>
 <ul>
 {% for team in teams %}
     <li>{{ team }}</li>
 {% endfor %}
 </ul>
+
+{% endif %}
 
 {% endblock %}

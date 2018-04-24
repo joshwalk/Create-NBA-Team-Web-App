@@ -1,7 +1,17 @@
 {% extends 'index.html' %}
 
 {% block main_content %}
+{% if not player_team_list %}
+There are no players yet. Go add some!
+{% else %}
+
 <h4>Saved players</h4>
+<div>
+{% for message in get_flashed_messages() %}
+<strong style="color:red">{{ message }}</strong>
+{% endfor %}
+</div>
+
 <ul>
 {% for player in player_team_list %}
     <li>{{ player }}
@@ -12,5 +22,9 @@
 	</li>
 {% endfor %}
 </ul>
+
+{% endif %}
+
+
 
 {% endblock %}

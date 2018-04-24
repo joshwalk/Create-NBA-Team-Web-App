@@ -8,7 +8,9 @@
 	{{ form.player_search.label }} {{ form.player_search }}
 	{{ form.submit() }}
 </form>
-
+{% for message in get_flashed_messages() %}
+<strong style="color:red">{{ message }}</strong>
+{% endfor %}
 <ul>
 {% for result in results %}
     <li>{{ result }}</li>

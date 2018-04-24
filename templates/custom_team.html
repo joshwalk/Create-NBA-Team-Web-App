@@ -2,11 +2,15 @@
 {% extends 'index.html' %}
 
 {% block main_content %}
+
 <h4>{{ custom_team.name }}</h4>
+
 <ul>
 {% for p in players %}
       <li>{{ p }}</li>
 {% endfor %}
 </ul>
+
+
 
 {% endblock %}
