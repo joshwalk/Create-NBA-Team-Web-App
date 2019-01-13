@@ -1,4 +1,4 @@
-# Create Your Own NBA Team - a web app developed using Python and Flask
+# Create Your Own NBA Team - a basic web app developed using Python and Flask
 
 ![app screenshot](https://raw.githubusercontent.com/joshwalk/364final/master/screenshot.jpg)
 
